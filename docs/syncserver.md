@@ -1,33 +1,28 @@
-# Local sync server
+# Local Sync Server (Self-Hosted)
+
+> **Note:** These instructions apply to the bundled sync server in Anki 2.1.43. Newer versions of Anki (2.1.57+) use a different sync server implementation with different configuration options (such as `SYNC_USER1` and media sync support).
 
 A local sync server is bundled with Anki. If you cannot or do not wish to
 use AnkiWeb, you can run the server on a machine on your local network.
 
-Things to be aware of:
+## Important Limitations
 
-- Media syncing is not currently supported. You will either need to disable
-  syncing of sounds and images in the preferences screen, sync your media via
-  AnkiWeb, or use some other solution.
-- AnkiMobile does not yet provide an option for using a local sync server,
-  so for now this will only be usable with the computer version of Anki, and
-  AnkiDroid.
-- This code is partly new, and while it has had some testing, it's possible
-  something has been missed. Please make backups, and report any bugs you run
-  into.
-- The server runs over an unencrypted HTTP connection and does not require
-  authentication, so it is only suitable for use on a private network.
-- This is an advanced feature, targeted at users who are comfortable with
-  networking and the command line. If you use this, the expectation is you
-  can resolve any setup/network/firewall issues you run into yourself, and
-  use of this is entirely at your own risk.
+Please be aware of the following before using the local sync server:
 
-## From source
+- **Media Syncing:** Not currently supported in this version. You will need to either disable syncing of sounds and images in the preferences screen, sync your media via AnkiWeb, or use an alternative solution.
+- **Client Support:** AnkiMobile does not yet provide an option for using a local sync server. This is currently only usable with the desktop version of Anki and AnkiDroid.
+- **Security:** The server runs over an unencrypted HTTP connection and **does not require authentication**. It is only suitable for use on a private, trusted network.
+- **Advanced Feature:** This is targeted at users comfortable with networking and the command line. You are expected to resolve any setup, network, or firewall issues yourself. Use is entirely at your own risk.
 
-If you run Anki from git, you can run a sync server with:
+## Running from Source
 
-```
+If you are running Anki from a source checkout, you can start the sync server with:
+
+```bash
 ./scripts/runopt --syncserver
 ```
+
+This command uses Bazel to build and run the server.
 
 ## From a packaged build
 
@@ -51,40 +46,69 @@ Or Linux:
 anki --syncserver
 ```
 
-## Without Qt dependencies
+## Without Qt Dependencies
 
 You can run the server without installing the GUI portion of Anki. Once Anki
 2.1.39 is released, the following will work:
 
-```
+```bash
 pip install anki[syncserver]
 python -m anki.syncserver
 ```
 
-## Server setup
+## Building a Standalone Wheel
 
-The server needs to store a copy of your collection in a folder.
-By default it is ~/.syncserver; you can change this by defining
-a `FOLDER` environmental variable. This should not be the same location
-as your normal Anki data folder.
+If you want to build a redistributable Python wheel from source, you can use the provided build scripts.
 
-You can also define `HOST` and `PORT`.
-
-## Client setup
-
-When the server starts, it will print the address it is listening on.
-You need to set an environmental variable before starting your Anki
-clients to tell them where to connect to. Eg:
-
+On Linux or macOS:
+```bash
+./scripts/build
 ```
-set SYNC_ENDPOINT="http://10.0.0.5:8080/sync/"
+
+On Windows:
+```bash
+.\scripts\build.bat
+```
+
+The generated `.whl` files will be located in the `bazel-dist/` directory. You can then install the `anki` wheel using `pip`:
+
+```bash
+pip install bazel-dist/anki-*.whl[syncserver]
+```
+
+## Server Configuration
+
+The following environment variables can be used to configure the server:
+
+- `FOLDER`: The directory where the server will store collections. Defaults to `~/.syncserver`. **This must not be the same as your normal Anki data folder.**
+- `HOST`: The IP address to bind to. Defaults to `0.0.0.0` (all interfaces).
+- `PORT`: The port to listen on. Defaults to `8080`.
+
+Example:
+```bash
+FOLDER=~/anki-server-data HOST=127.0.0.1 PORT=9000 anki --syncserver
+```
+
+## Client Configuration
+
+To tell your Anki clients to use your local sync server, you need to set the following environment variables before starting the client:
+
+- `SYNC_ENDPOINT`: The URL of your sync server's collection sync endpoint (e.g., `http://10.0.0.5:8080/sync/`).
+- `SYNC_ENDPOINT_MEDIA`: (Optional) The URL for media syncing. Note that the bundled server does not currently support media sync, so this is typically left pointed at AnkiWeb or unset.
+
+### Example (Linux/macOS)
+```bash
+export SYNC_ENDPOINT="http://10.0.0.5:8080/sync/"
 anki
 ```
 
-Currently any username and password will be accepted. If you wish to
-keep using AnkiWeb for media, sync once with AnkiWeb first, then switch
-to your local endpoint - collection syncs will be local, and media syncs
-will continue to go to AnkiWeb.
+### Example (Windows)
+```cmd
+set SYNC_ENDPOINT=http://10.0.0.5:8080/sync/
+anki-console.exe
+```
+
+Currently, any username and password will be accepted by the server. If you wish to keep using AnkiWeb for media, sync once with AnkiWeb first, then switch to your local endpoint. Collection syncs will be local, and media syncs will continue to go to AnkiWeb.
 
 ## Contributing
 
